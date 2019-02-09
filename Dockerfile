@@ -29,22 +29,24 @@ RUN set -ex \
     && apk add --virtual .python-rundeps $runDeps \
     && apk del .build-deps
 
+RUN apk add --no-cache bash
+
 # Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
 RUN mkdir /code/
 WORKDIR /code/
 ADD . /code/
 
-# uWSGI will listen on this port
-EXPOSE 8000
+RUN pip install -r requirements.txt
+
+RUN addgroup -S py && adduser -S -g . py
+#RUN sudo chown -R $USER:$USER .
 
 # Add any custom, static environment variables needed by Django or your settings file here:
-ENV DJANGO_SETTINGS_MODULE=my_project.settings.deploy
+ENV DJANGO_SETTINGS_MODULE=pyopoly.settings
 
 # uWSGI configuration (customize as needed):
-ENV UWSGI_VIRTUALENV=/venv UWSGI_WSGI_FILE=my_project/wsgi.py UWSGI_HTTP=:8000 UWSGI_MASTER=1 UWSGI_WORKERS=2 UWSGI_THREADS=8 UWSGI_UID=1000 UWSGI_GID=2000 UWSGI_LAZY_APPS=1 UWSGI_WSGI_ENV_BEHAVIOR=holy
+ENV UWSGI_VIRTUALENV=/venv UWSGI_WSGI_FILE=pyopoly/wsgi.py UWSGI_HTTP=:8000 UWSGI_MASTER=1 UWSGI_WORKERS=2 UWSGI_THREADS=8 UWSGI_UID=1000 UWSGI_GID=2000 UWSGI_LAZY_APPS=1 UWSGI_WSGI_ENV_BEHAVIOR=holy
 
 # Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
 RUN DATABASE_URL=none /venv/bin/python manage.py collectstatic --noinput
 
-# Start uWSGI
-CMD ["/venv/bin/uwsgi", "--http-auto-chunked", "--http-keepalive"]
